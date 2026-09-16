@@ -19,7 +19,7 @@ from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-import models
+import models  # noqa: F401  # 触发 SQLAlchemy 模型注册
 from database import init_db
 import os
 from routers import ocr, db_routes, user, template, parsing, log

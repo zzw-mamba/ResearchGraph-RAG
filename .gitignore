@@ -113,3 +113,10 @@ yarn.lock
 # Cache
 .cache/
 .parallel/
+
+# LLVM / Rust profile artifacts
+*.profraw
+*.profdata
+
+# Rag
+LightRAG/

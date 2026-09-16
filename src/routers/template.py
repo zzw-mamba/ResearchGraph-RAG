@@ -41,7 +41,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from database import get_db, SessionLocal
 from models import Template, User, Log
-from graphrag_module.service import get_graphrag_service, GRAPHRAG_IMPORT_ERROR
+from rag_service import get_rag_service, GRAPHRAG_IMPORT_ERROR
 from routers.user import get_current_user
 from utils.model import ask_messages, LLMError
 
@@ -171,7 +171,7 @@ def _execute_summary_generation(
     if job_id:
         _update_summary_job_stage(job_id, "searching")
 
-    graphrag_service = get_graphrag_service()
+    graphrag_service = get_rag_service()
     search_result = graphrag_service.similarity_search(
         request.query_text,
         top_k=request.top_k,

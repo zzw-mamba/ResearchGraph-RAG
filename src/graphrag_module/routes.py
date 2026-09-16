@@ -17,12 +17,12 @@
 
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from graphrag_module.service import DEFAULT_ONTOLOGY_FILE, get_graphrag_service, GRAPHRAG_IMPORT_ERROR
+from rag_service import DEFAULT_ONTOLOGY_FILE, get_rag_service, GRAPHRAG_IMPORT_ERROR
 
 
 router = APIRouter(prefix="/api/graphrag", tags=["graphrag"])
@@ -128,7 +128,7 @@ def _service_or_500():
             detail=f"neo4j-graphrag 导入失败: {GRAPHRAG_IMPORT_ERROR}",
         )
     try:
-        return get_graphrag_service()
+        return get_rag_service()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -160,6 +160,35 @@ async def diagnose():
         Dict[str, Any]: 诊断结果，包含连接状态、APOC 可用性、向量索引状态、约束信息和提示
     """
     service = _service_or_500()
+
+    # BUG-3 修复：检测是否为 LightRAG 后端（driver=None 或 settings 有 graph_storage 字段）
+    # LightRAGAdapter.driver 返回 None，且 _LightRAGSettingsProxy 有 graph_storage/vector_storage 属性
+    is_lightrag_backend = getattr(service, "driver", None) is None and (
+        hasattr(service.settings, "graph_storage")
+        and hasattr(service.settings, "vector_storage")
+    )
+
+    if is_lightrag_backend:
+        return {
+            "backend": "lightrag",
+            "connection": "ok",
+            "working_dir": getattr(service.settings, "working_dir", ""),
+            "workspace": getattr(service.settings, "workspace", ""),
+            "graph_storage": getattr(service.settings, "graph_storage", ""),
+            "vector_storage": getattr(service.settings, "vector_storage", ""),
+            "kv_storage": getattr(service.settings, "kv_storage", ""),
+            "doc_status_storage": getattr(service.settings, "doc_status_storage", ""),
+            "neo4j_uri": "(LightRAG backend, no Neo4j)",
+            "neo4j_user": "",
+            "apoc_available": False,
+            "vector_index_exists": False,
+            "constraints": [],
+            "tips": [
+                "当前为 LightRAG 后端，无需 Neo4j 连接",
+                "CSO 本体对齐功能仍依赖 Neo4j（如启用需单独配置）",
+            ],
+        }
+
     diagnostics = {
         "neo4j_uri": service.settings.neo4j_uri,
         "neo4j_user": service.settings.neo4j_user,
@@ -173,7 +202,7 @@ async def diagnose():
             "✓ 确保已安装 APOC 库（Plugins 中搜索）",
         ],
     }
-    
+
     try:
         with service.driver.session() as session:
             session.run("RETURN 1")

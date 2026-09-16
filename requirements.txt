@@ -74,3 +74,6 @@ python-jose>=3.0.0
 passlib>=1.7.0
 cryptography>=39.0.0
 bcrypt>=4.0.0
+
+# === LightRAG (Phase 2 RAG backend) ===
+lightrag-hku>=1.0.0
